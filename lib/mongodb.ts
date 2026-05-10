@@ -1,5 +1,8 @@
 import mongoose from "mongoose";
 
+// Disable strict query filtering to avoid warnings with Mongoose 9+
+mongoose.set("strictQuery", false);
+
 // Define the connection cache type
 type MongooseCache = {
   conn: typeof mongoose | null;
@@ -11,7 +14,7 @@ declare global {
   var mongoose: MongooseCache | undefined;
 }
 
-const MONGODB_URI = process.env.MONGODB_URI;
+const MONGODB_URI = process.env.MONGODB_URI || process.env.DATABASE_URL;
 
 // Initialize the cache on the global object to persist across hot reloads in development
 const cached: MongooseCache = global.mongoose || { conn: null, promise: null };
@@ -36,11 +39,14 @@ async function connectDB(): Promise<typeof mongoose> {
     // Validate MongoDB URI exists
     if (!MONGODB_URI) {
       throw new Error(
-        "Please define the MONGODB_URI environment variable inside .env.local",
+        "Please define the MONGODB_URI or DATABASE_URL environment variable inside .env.local",
       );
     }
+
     const options = {
       bufferCommands: false, // Disable Mongoose buffering
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     };
 
     // Create a new connection promise
